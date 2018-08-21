@@ -1,0 +1,244 @@
+---
+title: "HW 02 - Shot Charts"
+author: "Julie Song"
+output: github_document
+---
+
+###5) Summary Tables (20pts)
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = '../images/')
+```
+
+####5.1) Total Shots by Player (10pts)
+
+```{r}
+library(dplyr)
+library(ggplot2)
+shots_data = read.csv("../data/shots-data.csv")
+```
+
+```{r}
+#Total number of shots by player in descending order
+shots_data %>%
+  group_by(name) %>%
+  summarize(total = length(shot_type)) %>%
+  arrange(desc(total))
+```
+
+####5.2) Effective Shooting Percentage (10 pts)
+```{r}
+#Effective Shooting % by Player
+
+merge(shots_data %>%
+  group_by(name) %>%
+  summarize(total = length(shot_type)),
+  shots_data %>%
+  filter(shot_made_flag == 'made shot') %>%
+  group_by(name) %>%
+  summarize(made = length(shot_made_flag))
+  ) %>%
+  mutate(perc_made = made / total) %>%
+  arrange(desc(perc_made))
+```
+
+```{r}
+#2PT Effective Shooting % by player
+
+merge(
+  shots_data %>%
+  filter(shot_type == '2PT Field Goal') %>%
+  group_by(name) %>%
+  summarize(total = length(shot_type)) , 
+  shots_data %>%
+  filter(shot_made_flag == 'made shot' & shot_type == '2PT Field Goal') %>%
+  group_by(name) %>%
+  summarize(made = length(shot_type))
+  ) %>%
+  mutate(perc_made = made / total) %>%
+  arrange(desc(perc_made))
+```
+
+```{r}
+#3PT Effective Shooting % by player
+
+merge(
+  shots_data %>%
+  filter(shot_type == '3PT Field Goal') %>%
+  group_by(name) %>%
+  summarize(total = length(shot_type)) ,
+  shots_data %>%
+  filter(shot_made_flag == 'made shot' & shot_type == '3PT Field Goal') %>%
+  group_by(name) %>%
+  summarize(made = length(shot_type))
+  ) %>%
+  mutate(perc_made = made / total) %>%
+  arrange(desc(perc_made))
+```
+
+###6) Shooting Distance (20pts)
+
+####6.1 dplyr table (10pts)
+
+```{r}
+shot_dist = merge(
+  shots_data %>%
+  group_by(shot_distance) %>%
+  summarise(total_shots = length(shot_made_flag)) ,
+  shots_data %>%
+  group_by(shot_distance) %>%
+    summarize(total_made = sum(shot_made_flag == 'made shot'))
+  ) %>%
+  group_by(shot_distance) %>%
+  summarise(made_shot_prop = total_made / total_shots)
+shot_dist
+```
+
+####6.2 ggplot (10pts)
+
+```{r}
+ggplot(shot_dist, aes(x = shot_distance, y = made_shot_prop)) + geom_point() + labs(x = 'shot distance', y = 'made shot proportion', title = 'Scatterplot of Shot Distance and Proportion of Made Shots') + theme_minimal()
+```
+
+**1) What do you observe?**
+
+* From the graph above, I can observe that the closer the shot distance is, more likely for players to make the shot successfully. Shots that are taken within 0 to 2 ft proportions are noticeably higher than made shot proprtions at longer distances. Then, made shot proportions from distance 3 ft to about 33 ft seem to be quite similar, ranging between proportion of about 0.26 to 0.5. Further we go in terms of shot distance, we see that made shot proportion is zero, with shot taken from 51ft as an outlier. 
+
+**2) Can you confirm that the shorter the distance, the more effective the shots?**
+
+* From this scatterplot, it demonstrates some negative relationship between shot distance and made shot proportions, meaing that shorter the distance, hiehger made shot proportions. So, from this scatterplot, we can confirm our original hypothesis. 
+
+**3) Can you guesstimate a distance threshold beyond which the chance of making a successful shot is basically null?**
+
+* Around 33ft from the graph. 
+
+**4) What distances tend to have a percentage (of making a shot) of 50% or more?**
+
+* 0, 1, 2, 12, 16, 18, 21, 30, 51 ft, which can be confirmed by following code: 
+```{r}
+shot_dist %>%
+  filter(made_shot_prop >= 0.5)
+```
+
+###7) Total number of shots by minute of occurance (10pts)
+
+```{r}
+#For individual players: 
+andre_shots = shots_data %>%
+  filter(name == 'Andre Iguodala') %>%
+  select(minute, shot_made_flag) %>%
+  group_by(minute) %>%
+  summarize(total = sum(shot_made_flag == 'made shot' | shot_made_flag == 'missed shot')) %>%
+  mutate(name = rep('Andre Iguodala'))
+
+
+andre_shots %>%
+ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=2, to =48, by = 2)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Andre Iguodala's total number of shots (by minute of occurance)") + 
+  theme(legend.position="none")
+
+```
+
+```{r}
+draymond_shots = shots_data %>%
+  filter(name == 'Draymond Green') %>%
+  select(minute, shot_made_flag) %>%
+  group_by(minute) %>%
+  summarize(total = sum(shot_made_flag == 'made shot' | shot_made_flag == 'missed shot')) %>%
+  mutate(name = rep('Draymond Green'))
+
+draymond_shots %>%
+ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=2, to =48, by = 2)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Draymond Green's total number of shots (by minute of occurance)") + 
+  theme(legend.position="none")
+
+```
+
+```{r}
+kevin_shots = shots_data %>%
+  filter(name == 'Kevin Durant') %>%
+  select(minute, shot_made_flag) %>%
+  group_by(minute) %>%
+  summarize(total = sum(shot_made_flag == 'made shot' | shot_made_flag == 'missed shot')) %>%
+  mutate(name = rep('Kevin Durant'))
+
+kevin_shots %>%
+ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=2, to =48, by = 2)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Kevin Durant's total number of shots (by minute of occurance)") + 
+  theme(legend.position="none")
+
+```
+
+```{r}
+klay_shots = shots_data %>%
+  filter(name == 'Klay Thompson') %>%
+  select(minute, shot_made_flag) %>%
+  group_by(minute) %>%
+  summarize(total = sum(shot_made_flag == 'made shot' | shot_made_flag == 'missed shot')) %>%
+  mutate(name = rep('Klay Thompson'))
+
+klay_shots %>%
+ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=2, to =48, by = 2)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Klay Thompson's total number of shots (by minute of occurance)") + 
+  theme(legend.position="none")
+```
+
+```{r}
+stephen_shots = shots_data %>%
+  filter(name == 'Stephen Curry') %>%
+  select(minute, shot_made_flag) %>%
+  group_by(minute) %>%
+  summarize(total = sum(shot_made_flag == 'made shot' | shot_made_flag == 'missed shot')) %>%
+  mutate(name = rep('Stephen Curry'))
+
+stephen_shots %>%
+ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=2, to =48, by = 2)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Stephen Curry's total number of shots (by minute of occurance)") + 
+  theme(legend.position="none")
+```
+
+
+```{r}
+# Facetted graph for all players:
+rbind(klay_shots, stephen_shots, draymond_shots, kevin_shots, andre_shots) %>%
+  ggplot(aes(x = minute, y = total)) + 
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 0, xmax=12, ymin=0, ymax=60)+
+  geom_rect(fill = 'grey80', alpha = 0.04, xmin = 24, xmax=36, ymin=0, ymax=60) + 
+  geom_point(aes(color = 1)) +
+  scale_x_continuous(limits = c(0, 48), breaks = seq(from=0, to =48, by = 12)) + 
+  geom_path(aes(color = 1))  + 
+  theme_minimal()  + 
+  labs( x = 'minute', y = 'total number of shots', title = "Total number of shots (by minute of occurance)") + 
+  theme(legend.position="none") + 
+  facet_wrap(~name)
+```

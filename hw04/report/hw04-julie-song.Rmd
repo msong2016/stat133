@@ -1,0 +1,201 @@
+---
+title: "hw04-julie-song"
+author: "Julie Song"
+date: "4/6/2018"
+output: github_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE, fig.path = '../images/')
+```
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+```
+
+
+#1.4 Archive of 'stringr'
+
+```{r}
+source('../code/archive-functions.R')
+```
+
+```{r}
+raw_data <- read_archive('stringr')
+clean_data <- clean_archive(raw_data)
+plot_archive(clean_data)
+```
+
+#1.5 Archives of 'dplyr', 'ggplot2', 'XML', and 'knitr'
+
+```{r}
+#Exporting each table as csv file: 
+
+#ggplot2 csv file: 
+ggplot_read <- read_archive('ggplot2')
+ggplot_clean <- clean_archive(ggplot_read)
+write.csv(ggplot_clean, file = '../data/ggplot2-archive.csv')
+
+#xml csv file: 
+xml_read <- read_archive('XML')
+xml_clean <- clean_archive(xml_read)
+write.csv(xml_clean, file = '../data/XML-archive.csv')
+
+#knitr csv file:
+knitr_read <- read_archive('knitr')
+knitr_clean <- clean_archive(knitr_read)
+write.csv(knitr_clean, file = '../data/knitr-archive.csv')
+
+#dplyr csv file: 
+dplyr_read <- read_archive('dplyr')
+dplyr_clean <- clean_archive(dplyr_read)
+write.csv(dplyr_clean, file = '../data/dplyr-archive.csv')
+
+```
+
+```{r}
+
+# combining all data table into one single data frame
+
+all <- rbind(dplyr_clean, ggplot_clean, knitr_clean, xml_clean)
+
+#using ggplot2 to create two step line charts
+
+#plot all packages in one frame
+
+ggplot(all, aes(x = date, y = size)) + geom_step(aes(color = name)) + labs(title = 'Plot all packages in one frame', x = 'date', y = 'Size (Kilobytes)')
+
+#plot one package per facet (with free scales)
+
+ggplot(all, aes(x = date, y = size)) + geom_step(aes(color = name)) + facet_wrap(~name, scales = 'free') + theme(legend.position="none") + 
+  labs(title = 'Plot one package per facet (with free scales)', x = 'date', y = 'Size (Kilobytes)')
+
+```
+
+#3 Data "Emotion in Text"
+
+```{r}
+emotion <- read.csv('../data/text-emotion.csv')
+```
+
+#3.1 Number of characters per tweet
+
+```{r}
+
+#Count number of characters in the tweet contents
+
+counts <- rep(0)
+for (i in 1:length(emotion$content)) {
+  counts[i] <- nchar(as.character(emotion[i, 4]), type = 'chars')
+}
+
+table(counts)
+
+#display a summary() of counts
+
+summary(counts)
+
+#plot a histogram of counts
+
+ggplot(data.frame(counts), aes(x = counts)) + geom_histogram(binwidth = 5, fill = '#4286f4', color = 'white') + labs(x = 'Word Counts', y = 'Frequency', title = 'Histogram of Number of Characters in Tweets Content')
+
+```
+
+#3.2 Number of Mentions
+
+```{r}
+#Count the number of @ mentions in the tweet contents
+
+raw_id <- str_extract_all(emotion$content, '\\@\\w+')
+
+count_id <- rep(0)
+for (i in 1:length(emotion$content)) {
+  if(sum(nchar(raw_id[[i]]) <= 16 & nchar(raw_id[[i]]) != 0) >= 1) {
+    count_id[i] <- length(raw_id[[i]])
+  } else {
+    count_id[i] <- 0
+  }
+}
+
+#display frequencies and barplot of counts
+
+table(count_id)
+
+barplot(table(count_id), xlab = 'Number of Mentions', ylab = 'Frequencies', main = 'Barplot of Number of Mentions', col = '#4286f4')
+
+#display content of tweet with 10 mentions
+
+emotion$content[count_id == 10]
+
+```
+
+#3.3 Hashtags
+
+```{r}
+#Count the number of hashtags in the tweet contents
+
+raw_hash_count <- str_extract_all(emotion$content, '#[A-Za-z]')
+
+count_hash <- rep(0)
+for (i in 1:length(emotion$content)) {
+  if(length(raw_hash_count[[i]]) >= 1) {
+   count_hash[i] <- length(raw_hash_count[[i]])
+  } else {
+    count_hash[i] <- 0
+  }
+}
+
+#Display frequencies and barplot of counts
+
+table(count_hash)
+
+barplot(table(count_hash), xlab = 'Number of Hashtags', ylab = 'Frequencies', main = 'Barplot of Number of Hashtags', col = '#4286f4')
+```
+
+```{r}
+#Average length of hash tags and most common length
+
+#Method one: 
+
+raw_hash_one <- str_extract_all(emotion$content, '#[A-Za-z][A-Za-z0-9]*')
+unlisted_one <- unlist(raw_hash_one)
+
+hash_length_one <- nchar(unlisted_one) - 1
+
+summary(hash_length_one)
+
+table(hash_length_one)
+
+#average: 7.625
+#most common: length 4
+which.max(table(hash_length_one))
+
+
+```
+
+```{r}
+#Average length of hash tags and most common length
+
+#Method two: 
+
+raw_hash_two <- str_extract_all(emotion$content, '#[A-Za-z][A-Za-z0-9]*')
+
+unlisted_two <- unlist(
+  lapply(raw_hash_two, function(y) if (length(y) == 0) NULL else y [[1]])
+)
+
+hash_length_two <- str_count(unlisted_two) - 1
+
+summary(hash_length_two)
+
+table(hash_length_two)
+
+#average: 7.714
+#most common: length 4
+which.max(table(hash_length_two))
+
+
+```
+
